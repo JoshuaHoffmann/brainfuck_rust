@@ -9,25 +9,6 @@ fn print_usage() {
 }
 
 fn main() {
-    let raw_code:String = String::from(" ++++++++++
- [
-  >+++++++>++++++++++>+++>+<<<<-
- ]                       Schleife zur Vorbereitung der Textausgabe
- >++.                    Ausgabe von 'H'
- >+.                     Ausgabe von 'e'
- +++++++.                'l'
- .                       'l'
- +++.                    'o'
- >++.                    Leerzeichen
- <<+++++++++++++++.      'W'
- >.                      'o'
- +++.                    'r'
- ------.                 'l'
- --------.               'd'
- >+.                     '!'
- >.                      Zeilenvorschub
- +++.                    Wagenrücklauf");
-
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 2 {
