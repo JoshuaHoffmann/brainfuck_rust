@@ -12,7 +12,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 2 {
-        println!("Please provide only one filename.");
+        println!("Please provide only one filename with the ending bfck");
         print_usage();
         std::process::exit(0);
     }
