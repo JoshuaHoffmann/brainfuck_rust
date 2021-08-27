@@ -65,7 +65,7 @@ impl Interpreter {
         }
     }
 
-    fn current_value_as_char(&self) -> char {self.tape_array[self.head_position] as char}
+    fn current_value_as_char(&self) -> char {self.current_value() as char}
 
     /// This function steps the Interpreter one step forward:
     /// * It executes the operation corresponding to the operator at the program counter.
@@ -76,7 +76,7 @@ impl Interpreter {
             None    => panic!("Program counter: {} exceeded program length: {}.", self.program_counter, self.program.len()),
             Some(a) => a,
         };
-
+        
         if op == Operator::IncrDataPtr {
             self.head_position += 1;
         } else if op == Operator::DecrDataPtr {
@@ -93,19 +93,24 @@ impl Interpreter {
             }
         } else if op == Operator::CloseLoop {
             if self.current_value() != 0 {
-                self.program_counter = *self.loop_stack.last().unwrap();
+                self.program_counter = *match self.loop_stack.last() {
+                    None    => panic!("Encounterd a ']' without a matching '[' position in the loop stack."),
+                    Some(a) => a,
+                }
             } else {
-                self.loop_stack.pop();
+                match self.loop_stack.pop() {
+                    None    => panic!("There was no '[' position on the loop stack, yet there still was a ']' at position {} while the memroy cell is at 0.", self.head_position),
+                    Some(_) => (),
+                }
             }
         } else if op == Operator::OutputData {
             print!("{}", self.current_value_as_char());
-            stdout().flush();
+            stdout().flush().expect("Something went wrong while trying to flush the stdout buffer");
         } else if op == Operator::InputData {
             self.tape_array[self.head_position] = read!();
         }
-
+        
         self.program_counter += 1;
-
     }
 
     fn search_matching_closing(&self, pos_open: &usize) -> usize {
