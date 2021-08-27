@@ -49,9 +49,8 @@ impl Interpreter {
             ',' => Operator::InputData,
             '[' => Operator::OpenLoop,
             ']' => Operator::CloseLoop,
-            _ => unreachable!("While trying to convert the characters to \
-                                      the operator enum, a unknown character '{}' appeared", c)
-            }).collect(),
+            _ => unreachable!("While trying to convert the characters to the operator enum, a unknown character '{}' appeared", c),})
+            .collect(),
             tape_array: [0; 3000],
             head_position: 0,
             program_counter: 0,
@@ -59,7 +58,12 @@ impl Interpreter {
     }
     }
 
-    fn current_value(&self) -> u8 {self.tape_array[self.head_position]}
+    fn current_value(&self) -> u8 {
+        *match self.tape_array.get(self.head_position) {
+            None    => panic!("Access out of bounds error. The memory adress points to cell {}, but the memory is only {} large.", self.head_position, self.tape_array.len()),
+            Some(a) => a,
+        }
+    }
 
     fn current_value_as_char(&self) -> char {self.tape_array[self.head_position] as char}
 
@@ -67,7 +71,12 @@ impl Interpreter {
     /// * It executes the operation corresponding to the operator at the program counter.
     /// * It increases the program counter by one.
     fn step(&mut self) {
-        let op:Operator = *self.program.get(self.program_counter).unwrap();
+        // Try to get the operator at the program counter, if there is no way to get it safely, panic.
+        let op = *match self.program.get(self.program_counter) {
+            None    => panic!("Program counter: {} exceeded program length: {}.", self.program_counter, self.program.len()),
+            Some(a) => a,
+        };
+
         if op == Operator::IncrDataPtr {
             self.head_position += 1;
         } else if op == Operator::DecrDataPtr {
@@ -94,7 +103,9 @@ impl Interpreter {
         } else if op == Operator::InputData {
             self.tape_array[self.head_position] = read!();
         }
+
         self.program_counter += 1;
+
     }
 
     fn search_matching_closing(&self, pos_open: &usize) -> usize {
@@ -118,9 +129,10 @@ impl Interpreter {
         return pos_search;
     }
 
-    /// This function just runs the interprreter forever until something breaks or panics manually.
+    /// This function just calls the step function forever until there is a panic or a manual panic.
     pub fn run_unsafe(&mut self) {loop {self.step()} }
 
+    /// This function 
     pub fn run_safe(&mut self) {
         loop {
             if self.program_counter > self.program.len() - 1 {
