@@ -108,7 +108,8 @@ impl Interpreter {
             print!("{}", self.current_value_as_char());
             stdout().flush().expect("Something went wrong while trying to flush the stdout buffer");
         } else if op == Operator::InputData {
-            self.tape_array[self.head_position] = read!();
+            let c:char = read!();
+            self.tape_array[self.head_position] = c as u8;
         }
         
         self.program_counter += 1;
@@ -138,7 +139,7 @@ impl Interpreter {
     /// This function just calls the step function forever until there is a panic or a manual panic.
     pub fn run_unsafe(&mut self) {loop {self.step()} }
 
-    /// This function 
+    /// This function steps through the program until it reaches the end.
     pub fn run_safe(&mut self) {
         loop {
             if self.program_counter > self.program.len() - 1 {
@@ -147,6 +148,5 @@ impl Interpreter {
             }
             self.step();
         }
-
     }
 }

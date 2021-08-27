@@ -17,10 +17,9 @@ fn main() {
         std::process::exit(0);
     }
 
-    let filename = &args[2];
+    let filename = &args[1];
 
-    let contents = fs::read_to_string(filename)
-                      .expect("Something went wrong reading the file");
+    let contents = fs::read_to_string(filename).expect("Something went wrong reading the provided file.");
 
     let mut inter = Interpreter::new_from_raw(contents);
     inter.run_safe();
