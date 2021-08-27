@@ -50,9 +50,8 @@ impl Interpreter {
             '[' => Operator::OpenLoop,
             ']' => Operator::CloseLoop,
             _ => unreachable!("While trying to convert the characters to \
-                                      the operator enum, a unknown character '{}' appeared",
-            c)
-        }).collect(),
+                                      the operator enum, a unknown character '{}' appeared", c)
+            }).collect(),
             tape_array: [0; 3000],
             head_position: 0,
             program_counter: 0,
@@ -64,6 +63,9 @@ impl Interpreter {
 
     fn current_value_as_char(&self) -> char {self.tape_array[self.head_position] as char}
 
+    /// This function steps the Interpreter one step forward:
+    /// * It executes the operation corresponding to the operator at the program counter.
+    /// * It increases the program counter by one.
     fn step(&mut self) {
         let op:Operator = *self.program.get(self.program_counter).unwrap();
         if op == Operator::IncrDataPtr {
@@ -100,20 +102,24 @@ impl Interpreter {
         let mut pos_search = pos_open.clone();
         while nesting_depth != 0 {
             pos_search += 1;
-            if self.program[pos_search] == Operator::OpenLoop {
-                nesting_depth += 1;
-            } else if self.program[pos_search] == Operator::CloseLoop {
-                nesting_depth -= 1;
+            match self.program.get(pos_search) {
+                None => panic!("Reached end of program without finding a matching ']' to the '[' at position {}. Nesting depth: {}", pos_open, nesting_depth),
+                Some(op) => {
+                    match op {
+                        Operator::CloseLoop => {nesting_depth -= 1}, // If there is another '[' increrase the nesting depth, because we stepped into a new loop.
+                        Operator::OpenLoop  => {nesting_depth += 1}, // If there is a ']' decrease the nesting depth, becuase we stepped out of a loop.
+                        _ => (),
+                    }
+                }
             }
+            // If the nesting depth is zero, we have found the matching ']' therfore we should break out of the loop and return the position.
+            if nesting_depth == 0 {break}
         }
         return pos_search;
     }
 
-    pub fn run_unsafe(&mut self) {
-        loop {
-            self.step();
-        }
-    }
+    /// This function just runs the interprreter forever until something breaks or panics manually.
+    pub fn run_unsafe(&mut self) {loop {self.step()} }
 
     pub fn run_safe(&mut self) {
         loop {
