@@ -86,6 +86,7 @@ impl Interpreter {
         } else if op == Operator::DecrData {
             self.tape_array[self.head_position] -= 1;
         } else if op == Operator::OpenLoop {
+            // If the current cell is at 0 skip to the matching ]. Else continue and add the program counter position to the loop stack so you can jump back later.
             if self.current_value() == 0 {
                 self.program_counter = self.search_matching_closing(&self.program_counter);
             } else {
