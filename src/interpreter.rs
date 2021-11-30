@@ -11,11 +11,12 @@ pub enum Operator {
     InputData,
     OpenLoop,
     CloseLoop,
+    Halt,
 }
 
 type Program = Vec<Operator>;
 
-const STR_OPERATORS: &str = "<>+-,.[]";
+const STR_OPERATORS: &str = "<>+-,.[]~";
 
 pub struct Interpreter {
     program: Program,
@@ -23,6 +24,7 @@ pub struct Interpreter {
     head_position: usize,
     program_counter: usize,
     loop_stack: Vec<usize>,
+    halted: bool,
 }
 
 impl Interpreter {
@@ -33,6 +35,7 @@ impl Interpreter {
             head_position: 0,
             program_counter: 0,
             loop_stack: Vec::new(),
+            halted: false,
         }
     }
 
@@ -49,13 +52,15 @@ impl Interpreter {
             ',' => Operator::InputData,
             '[' => Operator::OpenLoop,
             ']' => Operator::CloseLoop,
+            '~' => Operator::Halt,
             _ => unreachable!("While trying to convert the characters to the operator enum, a unknown character '{}' appeared", c),})
             .collect(),
             tape_array: [0; 3000],
             head_position: 0,
             program_counter: 0,
             loop_stack: Vec::new(),
-    }
+            halted: false,
+        }
     }
 
     fn current_value(&self) -> u8 {
@@ -110,6 +115,9 @@ impl Interpreter {
         } else if op == Operator::InputData {
             let c:char = read!();
             self.tape_array[self.head_position] = c as u8;
+        } else if op == Operator::Halt {
+            self.halted = true;
+            return;
         }
         
         self.program_counter += 1;
@@ -136,17 +144,24 @@ impl Interpreter {
         return pos_search;
     }
 
-    /// This function just calls the step function forever until there is a panic or a manual panic.
-    pub fn run_unsafe(&mut self) {loop {self.step()} }
+    /// This function just calls the step function until there is a halt operator or a panic.
+    pub fn run_unsafe(&mut self) {
+        while !self.halted {
+            self.step()
+        }
+        
+    }
 
-    /// This function steps through the program until it reaches the end.
+    /// This function steps through the program until it reaches the end of the programm or the halt operator.
     pub fn run_safe(&mut self) {
         loop {
-            if self.program_counter > self.program.len() - 1 {
+            if self.program_counter > self.program.len() - 1 || self.halted {
                 println!("\nThe Program has ended.");
                 break;
             }
             self.step();
         }
     }
+
+    
 }
