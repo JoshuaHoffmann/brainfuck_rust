@@ -9,21 +9,21 @@ pub enum Operator {
     DecrData,
     OutputData,
     InputData,
-    OpenLoop,
-    CloseLoop,
+    OpenLoop(usize),
+    CloseLoop(usize),
     Halt,
 }
 
 type Program = Vec<Operator>;
+type Cell = u8;
 
 const STR_OPERATORS: &str = "<>+-,.[]~";
 
 pub struct Interpreter {
     program: Program,
-    tape_array: [u8; 3000],
+    tape_array: Vec<Cell>,
     head_position: usize,
     program_counter: usize,
-    loop_stack: Vec<usize>,
     halted: bool,
 }
 
@@ -31,34 +31,69 @@ impl Interpreter {
     pub fn new(p: Program) -> Interpreter {
         Interpreter {
             program: p,
-            tape_array: [0; 3000],
+            tape_array: Vec::new(),
             head_position: 0,
             program_counter: 0,
-            loop_stack: Vec::new(),
             halted: false,
         }
     }
 
     pub fn new_from_raw(r: String) -> Interpreter {
+        let filterd:Vec<char> = r.chars().filter( |&c| STR_OPERATORS.contains(c)).collect();
+        let mut program:Vec<Operator> = Vec::new();
+        let mut loopstack_open:Vec<usize> = Vec::new();
+
+        for (i,c) in filterd.iter().enumerate() {
+            match c {
+                '<' => program.push(Operator::DecrDataPtr),
+                '>' => program.push(Operator::IncrDataPtr),
+                '+' => program.push(Operator::IncrData),
+                '-' => program.push(Operator::DecrData),
+                '.' => program.push(Operator::OutputData),
+                ',' => program.push(Operator::InputData),
+                '~' => program.push(Operator::Halt),
+                '[' => {
+                    loopstack_open.push(i);
+                    program.push(Operator::OpenLoop(0));
+                },
+                ']' => {
+                    match loopstack_open.pop() {
+                        Some(a) => program.push(Operator::CloseLoop(a)),
+                        None    => panic!("Found ] without prior matching [ at pos {}\n", i),
+                    }
+                }
+                _ => unreachable!("Illegal character found after filtering.")
+            }
+        }
+        // Point open loops back to closing loops
+        let mut i = program.len();
+        let mut program_copy = program.clone();
+        let mut loopstack_close:Vec<usize> = Vec::new();
+        loop {
+            i -= 1;
+            match program_copy.pop().unwrap() {
+                Operator::CloseLoop(_) => loopstack_close.push(i),
+                Operator::OpenLoop(_) => {
+                    match loopstack_close.pop() {
+                        Some(a) => {
+                            program[i] = Operator::OpenLoop(a);
+                        },
+                        None => panic!("Found [ without matching ] at pos {}\n", i),
+                    }
+                }
+                _ => {},
+
+            }
+            if i == 0 {
+                break;
+            }
+        }
+
         Interpreter {
-            program: r.chars()
-            .filter( | & c| STR_OPERATORS.contains(c))
-            .map( | c| match c {
-            '>' => Operator::IncrDataPtr,
-            '<' => Operator::DecrDataPtr,
-            '+' => Operator::IncrData,
-            '-' => Operator::DecrData,
-            '.' => Operator::OutputData,
-            ',' => Operator::InputData,
-            '[' => Operator::OpenLoop,
-            ']' => Operator::CloseLoop,
-            '~' => Operator::Halt,
-            _ => unreachable!("While trying to convert the characters to the operator enum, a unknown character '{}' appeared", c),})
-            .collect(),
-            tape_array: [0; 3000],
+            program: program,
+            tape_array: Vec::new(),
             head_position: 0,
             program_counter: 0,
-            loop_stack: Vec::new(),
             halted: false,
         }
     }
@@ -82,44 +117,45 @@ impl Interpreter {
             Some(a) => a,
         };
         
-        if op == Operator::IncrDataPtr {
-            self.head_position += 1;
-        } else if op == Operator::DecrDataPtr {
-            self.head_position -= 1;
-        } else if op == Operator::IncrData {
-            self.tape_array[self.head_position] += 1;
-        } else if op == Operator::DecrData {
-            self.tape_array[self.head_position] -= 1;
-        } else if op == Operator::OpenLoop {
-            // If the current cell is at 0 skip to the matching ]. Else continue and add the program counter position to the loop stack so you can jump back later.
-            if self.current_value() == 0 {
-                self.program_counter = self.search_matching_closing(&self.program_counter);
-            } else {
-                self.loop_stack.push(self.program_counter);
-            }
-        } else if op == Operator::CloseLoop {
-            if self.current_value() != 0 {
-                self.program_counter = *match self.loop_stack.last() {
-                    None    => panic!("Encounterd a ']' without a matching '[' position in the loop stack."),
-                    Some(a) => a,
+        match op {
+            Operator::IncrDataPtr => {
+                self.head_position += 1;
+                if self.head_position >= self.tape_array.len() {
+                    self.tape_array.push(0);
                 }
-            } else {
-                match self.loop_stack.pop() {
-                    None    => panic!("There was no '[' position on the loop stack, yet there still was a ']' at position {} while the memroy cell is at 0.", self.head_position),
-                    Some(_) => (),
+            },
+            Operator::DecrDataPtr => {
+                self.head_position -= 1;
+            },
+            Operator::DecrData => {
+                self.tape_array[self.head_position] += 1;
+            },
+            Operator::IncrData => {
+                self.tape_array[self.head_position] -= 1;
+            },
+            Operator::OpenLoop(a) => {
+                if self.current_value() == 0 {
+                    self.program_counter = a;
                 }
+            },
+            Operator::CloseLoop(a) => {
+                if self.current_value() != 0 {
+                    self.program_counter = a;
+                }
+            },
+            Operator::OutputData => {
+                print!("{}", self.current_value_as_char());
+                stdout().flush().expect("Something went wrong while trying to flush the stdout buffer");
+            },
+            Operator::InputData => {
+                let c:char = read!();
+                self.tape_array[self.head_position] = c as u8;
+            },
+            Operator::Halt => {
+                self.halted = true;
+                return;
             }
-        } else if op == Operator::OutputData {
-            print!("{}", self.current_value_as_char());
-            stdout().flush().expect("Something went wrong while trying to flush the stdout buffer");
-        } else if op == Operator::InputData {
-            let c:char = read!();
-            self.tape_array[self.head_position] = c as u8;
-        } else if op == Operator::Halt {
-            self.halted = true;
-            return;
         }
-        
         self.program_counter += 1;
     }
 
@@ -132,8 +168,8 @@ impl Interpreter {
                 None => panic!("Reached end of program without finding a matching ']' to the '[' at position {}. Nesting depth: {}", pos_open, nesting_depth),
                 Some(op) => {
                     match op {
-                        Operator::CloseLoop => {nesting_depth -= 1}, // If there is another '[' increrase the nesting depth, because we stepped into a new loop.
-                        Operator::OpenLoop  => {nesting_depth += 1}, // If there is a ']' decrease the nesting depth, becuase we stepped out of a loop.
+                        Operator::CloseLoop(_) => {nesting_depth -= 1}, // If there is another '[' increrase the nesting depth, because we stepped into a new loop.
+                        Operator::OpenLoop(_)  => {nesting_depth += 1}, // If there is a ']' decrease the nesting depth, becuase we stepped out of a loop.
                         _ => (),
                     }
                 }
@@ -162,6 +198,5 @@ impl Interpreter {
             self.step();
         }
     }
-
     
 }
