@@ -38,6 +38,7 @@ impl Interpreter {
         }
     }
 
+    /// Create a [Interpreter] struct from a raw string, by filtering for allowed [STR_OPERATORS] and then parsing them to a Vec of [Operator].
     pub fn new_from_raw(r: String) -> Interpreter {
         let filterd:Vec<char> = r.chars().filter( |&c| STR_OPERATORS.contains(c)).collect();
         let mut program:Vec<Operator> = Vec::new();
