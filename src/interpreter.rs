@@ -186,7 +186,6 @@ impl Interpreter {
         while !self.halted {
             self.step()
         }
-        
     }
 
     /// This function steps through the program until it reaches the end of the programm or the halt operator.
