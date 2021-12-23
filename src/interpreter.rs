@@ -59,35 +59,19 @@ impl Interpreter {
                 },
                 ']' => {
                     match loopstack_open.pop() {
-                        Some(a) => program.push(Operator::CloseLoop(a)),
+                        Some(a) => {
+                            program.push(Operator::CloseLoop(a));
+                            program[a] = Operator::OpenLoop(i);
+                        },
                         None    => panic!("Found ] without prior matching [ at pos {}\n", i),
                     }
                 }
                 _ => unreachable!("Illegal character found after filtering.")
             }
         }
-        // Point open loops back to closing loops
-        let mut i = program.len();
-        let mut program_copy = program.clone();
-        let mut loopstack_close:Vec<usize> = Vec::new();
-        loop {
-            i -= 1;
-            match program_copy.pop().unwrap() {
-                Operator::CloseLoop(_) => loopstack_close.push(i),
-                Operator::OpenLoop(_) => {
-                    match loopstack_close.pop() {
-                        Some(a) => {
-                            program[i] = Operator::OpenLoop(a);
-                        },
-                        None => panic!("Found [ without matching ] at pos {}\n", i),
-                    }
-                }
-                _ => {},
 
-            }
-            if i == 0 {
-                break;
-            }
+        if !loopstack_open.is_empty() {
+            panic!("Not all [ closed with ]. Loopstack: {:?}", loopstack_open);
         }
 
         Interpreter {
