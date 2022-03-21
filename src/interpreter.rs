@@ -1,4 +1,4 @@
-use std::io::{stdout, Write};
+use std::{io::{stdout, Write}};
 use text_io::read;
 
 #[derive(PartialEq, Eq, Copy, Clone)]
@@ -34,7 +34,7 @@ impl Interpreter {
 
         Ok (Interpreter {
             program: program,
-            tape_array: Vec::new(),
+            tape_array: vec![0],
             head_position: 0,
             program_counter: 0,
             halted: false,
@@ -53,10 +53,10 @@ impl Interpreter {
     /// This function steps the Interpreter one step forward:
     /// * It executes the operation corresponding to the operator at the program counter.
     /// * It increases the program counter by one.
-    fn step(&mut self) {
+    fn step(&mut self) -> Result<(), &'static str> {
         // Try to get the operator at the program counter, if there is no way to get it safely, panic.
         let op = *match self.program.get(self.program_counter) {
-            None    => panic!("Program counter: {} exceeded program length: {}.", self.program_counter, self.program.len()),
+            None    => return Err("Program counter exceeded program length."),
             Some(a) => a,
         };
         
@@ -96,21 +96,23 @@ impl Interpreter {
             },
             Operator::Halt => {
                 self.halted = true;
-                return;
+                return Ok(());
             }
         }
         self.program_counter += 1;
+        return Ok(());
     }
 
     /// This function steps through the program until it reaches the end of the programm or the halt operator.
-    pub fn run_safe(&mut self) {
+    pub fn run_safe(&mut self) -> Result<(), &'static str> {
         loop {
             if self.program_counter > self.program.len() - 1 || self.halted {
                 println!("\nThe Program has ended.");
                 break;
             }
-            self.step();
+            self.step()?;
         }
+        return Ok(());
     }
     
 }
