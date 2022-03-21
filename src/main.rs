@@ -1,4 +1,5 @@
 mod interpreter;
+mod compiler;
 
 use crate::interpreter::Interpreter;
 use std::env;
