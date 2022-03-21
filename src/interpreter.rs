@@ -28,18 +28,8 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    pub fn new(p: Program) -> Interpreter {
-        Interpreter {
-            program: p,
-            tape_array: Vec::new(),
-            head_position: 0,
-            program_counter: 0,
-            halted: false,
-        }
-    }
-
     /// Create a [Interpreter] struct from a raw string, by filtering for allowed [STR_OPERATORS] and then parsing them to a Vec of [Operator].
-    pub fn new_from_raw(r: String) -> Result<Interpreter, String> {
+    pub fn new_from_raw(r: String) -> Result<Interpreter, &'static str> {
         let program:Program = str_to_program(r)?;
 
         Ok (Interpreter {
@@ -112,13 +102,6 @@ impl Interpreter {
         self.program_counter += 1;
     }
 
-    /// This function just calls the step function until there is a halt operator or a panic.
-    pub fn run_unsafe(&mut self) {
-        while !self.halted {
-            self.step()
-        }
-    }
-
     /// This function steps through the program until it reaches the end of the programm or the halt operator.
     pub fn run_safe(&mut self) {
         loop {
@@ -132,7 +115,7 @@ impl Interpreter {
     
 }
 
-pub fn str_to_program(r: String) -> Result<Program, String> {
+pub fn str_to_program(r: String) -> Result<Program, &'static str> {
     let filterd:Vec<char> = r.chars().filter( |&c| STR_OPERATORS.contains(c)).collect();
     let mut program:Vec<Operator> = Vec::new();
     let mut loopstack_open:Vec<usize> = Vec::new();
@@ -156,17 +139,17 @@ pub fn str_to_program(r: String) -> Result<Program, String> {
                         program[a] = Operator::OpenLoop(i);
                     },
                     None    => {
-                        return Err(format!("Found ] without prior matching [ at pos {}\n", i))
+                        return Err("Found ] without prior matching [ at pos {}\n");
                     },
                 }
             }
             _ => {
-                return Err(format!("Illegal character '{}' found after filtering.\n", c))
+                return Err("Illegal character found after filtering.\n");
             }
         }
     }
     if !loopstack_open.is_empty() {
-        return Err(format!("Not all [ closed with ]. Loopstack: {:?}\n", loopstack_open));
+        return Err("Not all [ closed with ].");
     }
     return Ok(program);
 }

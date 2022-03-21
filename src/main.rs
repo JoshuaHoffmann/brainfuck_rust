@@ -1,6 +1,8 @@
 mod interpreter;
 mod compiler;
 
+use compiler::compile_to_c;
+
 use crate::interpreter::Interpreter;
 use std::env;
 use std::fs;
@@ -15,15 +17,15 @@ fn main() -> Result<(), String> {
     if args.len() != 2 {
         println!("Please provide only one file as argument.");
         print_usage();
-        std::process::exit(0);
+        return Ok(());
     }
 
     let filename = &args[1];
 
     let contents = fs::read_to_string(filename).expect("Something went wrong reading the provided file.");
 
-    let mut inter = Interpreter::new_from_raw(contents)?;
-    inter.run_safe();
+    let c_code = compile_to_c(contents)?;
+    print!("{}", c_code);
 
     return Ok(());
 }
