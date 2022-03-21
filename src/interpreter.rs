@@ -39,53 +39,21 @@ impl Interpreter {
     }
 
     /// Create a [Interpreter] struct from a raw string, by filtering for allowed [STR_OPERATORS] and then parsing them to a Vec of [Operator].
-    pub fn new_from_raw(r: String) -> Interpreter {
-        let filterd:Vec<char> = r.chars().filter( |&c| STR_OPERATORS.contains(c)).collect();
-        let mut program:Vec<Operator> = Vec::new();
-        let mut loopstack_open:Vec<usize> = Vec::new();
+    pub fn new_from_raw(r: String) -> Result<Interpreter, String> {
+        let program:Program = str_to_program(r)?;
 
-        for (i,c) in filterd.iter().enumerate() {
-            match c {
-                '<' => program.push(Operator::DecrDataPtr),
-                '>' => program.push(Operator::IncrDataPtr),
-                '+' => program.push(Operator::IncrData),
-                '-' => program.push(Operator::DecrData),
-                '.' => program.push(Operator::OutputData),
-                ',' => program.push(Operator::InputData),
-                '~' => program.push(Operator::Halt),
-                '[' => {
-                    loopstack_open.push(i);
-                    program.push(Operator::OpenLoop(0));
-                },
-                ']' => {
-                    match loopstack_open.pop() {
-                        Some(a) => {
-                            program.push(Operator::CloseLoop(a));
-                            program[a] = Operator::OpenLoop(i);
-                        },
-                        None    => panic!("Found ] without prior matching [ at pos {}\n", i),
-                    }
-                }
-                _ => unreachable!("Illegal character found after filtering.")
-            }
-        }
-
-        if !loopstack_open.is_empty() {
-            panic!("Not all [ closed with ]. Loopstack: {:?}", loopstack_open);
-        }
-
-        Interpreter {
+        Ok (Interpreter {
             program: program,
             tape_array: Vec::new(),
             head_position: 0,
             program_counter: 0,
             halted: false,
-        }
+        })
     }
 
     fn current_value(&self) -> u8 {
         *match self.tape_array.get(self.head_position) {
-            None    => panic!("Access out of bounds error. The memory adress points to cell {}, but the memory is only {} large.", self.head_position, self.tape_array.len()),
+            None    => panic!("Access out of bounds error. The memory adress points to cell {}, but the memory tape is only {} large.", self.head_position, self.tape_array.len()),
             Some(a) => a,
         }
     }
@@ -144,27 +112,6 @@ impl Interpreter {
         self.program_counter += 1;
     }
 
-    fn search_matching_closing(&self, pos_open: &usize) -> usize {
-        let mut nesting_depth = 1;
-        let mut pos_search = pos_open.clone();
-        while nesting_depth != 0 {
-            pos_search += 1;
-            match self.program.get(pos_search) {
-                None => panic!("Reached end of program without finding a matching ']' to the '[' at position {}. Nesting depth: {}", pos_open, nesting_depth),
-                Some(op) => {
-                    match op {
-                        Operator::CloseLoop(_) => {nesting_depth -= 1}, // If there is another '[' increrase the nesting depth, because we stepped into a new loop.
-                        Operator::OpenLoop(_)  => {nesting_depth += 1}, // If there is a ']' decrease the nesting depth, becuase we stepped out of a loop.
-                        _ => (),
-                    }
-                }
-            }
-            // If the nesting depth is zero, we have found the matching ']' therfore we should break out of the loop and return the position.
-            if nesting_depth == 0 {break}
-        }
-        return pos_search;
-    }
-
     /// This function just calls the step function until there is a halt operator or a panic.
     pub fn run_unsafe(&mut self) {
         while !self.halted {
@@ -183,4 +130,43 @@ impl Interpreter {
         }
     }
     
+}
+
+pub fn str_to_program(r: String) -> Result<Program, String> {
+    let filterd:Vec<char> = r.chars().filter( |&c| STR_OPERATORS.contains(c)).collect();
+    let mut program:Vec<Operator> = Vec::new();
+    let mut loopstack_open:Vec<usize> = Vec::new();
+    for (i,c) in filterd.iter().enumerate() {
+        match c {
+            '<' => program.push(Operator::DecrDataPtr),
+            '>' => program.push(Operator::IncrDataPtr),
+            '+' => program.push(Operator::IncrData),
+            '-' => program.push(Operator::DecrData),
+            '.' => program.push(Operator::OutputData),
+            ',' => program.push(Operator::InputData),
+            '~' => program.push(Operator::Halt),
+            '[' => {
+                loopstack_open.push(i);
+                program.push(Operator::OpenLoop(0));
+            },
+            ']' => {
+                match loopstack_open.pop() {
+                    Some(a) => {
+                        program.push(Operator::CloseLoop(a));
+                        program[a] = Operator::OpenLoop(i);
+                    },
+                    None    => {
+                        return Err(format!("Found ] without prior matching [ at pos {}\n", i))
+                    },
+                }
+            }
+            _ => {
+                return Err(format!("Illegal character '{}' found after filtering.\n", c))
+            }
+        }
+    }
+    if !loopstack_open.is_empty() {
+        return Err(format!("Not all [ closed with ]. Loopstack: {:?}\n", loopstack_open));
+    }
+    return Ok(program);
 }
