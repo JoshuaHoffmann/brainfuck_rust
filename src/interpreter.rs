@@ -71,10 +71,10 @@ impl Interpreter {
                 self.head_position -= 1;
             },
             Operator::DecrData => {
-                self.tape_array[self.head_position] += 1;
+                self.tape_array[self.head_position] -= 1;
             },
             Operator::IncrData => {
-                self.tape_array[self.head_position] -= 1;
+                self.tape_array[self.head_position] += 1;
             },
             Operator::OpenLoop(a) => {
                 if self.current_value() == 0 {
@@ -112,6 +112,40 @@ impl Interpreter {
             }
             self.step()?;
         }
+        return Ok(());
+    }
+
+    /// Returns the current state as a String.
+    fn to_string(&self) -> String {
+        let mut tape_state:String = String::new();
+
+        tape_state.push_str(&format!("Head pos: {}\nProgram counter: {}\n", self.head_position, self.program_counter));
+        
+        for (idx, &cell) in self.tape_array.iter().enumerate() {
+            if self.head_position == idx {
+                tape_state.push_str(&format!("[{}]", cell));
+            } else {
+                tape_state.push(cell as char);
+                tape_state.push(' ');
+            }
+            tape_state.push('\n');
+        }
+
+        tape_state.push('\n');
+
+        return tape_state;
+    }
+
+    pub fn run_debug(&mut self) -> Result<(), &'static str> {
+        loop {
+            if self.program_counter > self.program.len() - 1 || self.halted {
+                println!("\nThe Program has ended.");
+                break;
+            }
+            println!("{}", self.to_string());
+            self.step()?;
+        }
+
         return Ok(());
     }
     

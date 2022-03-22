@@ -8,7 +8,7 @@ use std::env;
 use std::fs;
 
 fn print_usage() {
-    println!("Usage: Brainfuck.exe <com|int> <filename>");
+    println!("Usage: Brainfuck.exe <com|int|deb> <filename>");
 }
 
 fn main() -> Result<(), String> {
@@ -31,8 +31,10 @@ fn main() -> Result<(), String> {
     } else if mode == "int" {
         let mut inter = Interpreter::new_from_raw(contents)?;
         inter.run_safe();
+    } else if mode == "deb" {
+        let mut inter = Interpreter::new_from_raw(contents)?;
+        inter.run_debug();
     } else {
-        println!("Invalid mode: {}.", mode);
         print_usage();
     }
 
