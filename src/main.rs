@@ -1,11 +1,15 @@
 mod interpreter;
 mod compiler;
+mod utils;
 
 use compiler::compile_to_c;
 
 use crate::interpreter::Interpreter;
+use crate::utils::new_extension;
 use std::env;
 use std::fs;
+use std::fs::File;
+use std::io::Write;
 
 fn print_usage() {
     println!("Usage: Brainfuck.exe <com|int|deb> <filename>");
@@ -20,14 +24,19 @@ fn main() -> Result<(), String> {
         return Ok(());
     }
 
-    let filename = &args[2];
+    let path = &args[2];
 
-    let contents = fs::read_to_string(filename).expect("Something went wrong reading the provided file.");
+    // TODO: Don't panic
+    let contents = fs::read_to_string(path).expect("Something went wrong reading the provided file");
 
     let mode = &args[1];
     if mode == "com" {
         let c_code = compile_to_c(contents)?;
-        print!("{}", c_code);
+        let new_file = new_extension(path, ".c")?;
+        // TODO: Don't panic, better error handling for consistency.
+        // TODO: Save compiled file to path at compile src.
+        let mut f = File::create(new_file).expect("Couldn't write compiled file");
+        f.write_all(c_code.as_bytes()).expect("Couldn't write compiled code to allready opened file");
     } else if mode == "int" {
         let mut inter = Interpreter::new_from_raw(contents)?;
         inter.run_safe()?;
@@ -40,3 +49,4 @@ fn main() -> Result<(), String> {
 
     return Ok(());
 }
+

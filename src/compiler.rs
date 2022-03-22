@@ -1,5 +1,6 @@
 use crate::interpreter::{str_to_program, Operator};
 
+// TODO: Custom tape size
 const TAPE_SIZE: usize = 1000;
 
 fn push_code_indent(s: &mut String, p: &str, i: usize) {
