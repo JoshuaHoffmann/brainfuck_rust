@@ -3,7 +3,7 @@ use crate::interpreter::{str_to_program, Operator};
 const TAPE_SIZE: usize = 1000;
 
 fn push_code_indent(s: &mut String, p: &str, i: usize) {
-    for x in 0..i {
+    for _ in 0..i {
         s.push_str("\t");
     }
     s.push_str(p);
