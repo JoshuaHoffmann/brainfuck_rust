@@ -30,10 +30,10 @@ fn main() -> Result<(), String> {
         print!("{}", c_code);
     } else if mode == "int" {
         let mut inter = Interpreter::new_from_raw(contents)?;
-        inter.run_safe();
+        inter.run_safe()?;
     } else if mode == "deb" {
         let mut inter = Interpreter::new_from_raw(contents)?;
-        inter.run_debug();
+        inter.run_debug()?;
     } else {
         print_usage();
     }
