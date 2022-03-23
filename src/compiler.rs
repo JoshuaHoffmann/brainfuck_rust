@@ -57,8 +57,7 @@ pub fn compile_to_c(raw: String) -> Result<String, &'static str> {
             Operator::CloseLoop(_) => {
                 indent_depth -= 1;
                 push_code_indent(&mut c_code, "}\n", indent_depth);
-            }
-            _ => return Err("Unknown character encounterd while generating C code."),
+            },
         }
     }
     

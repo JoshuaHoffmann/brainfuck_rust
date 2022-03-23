@@ -16,6 +16,7 @@ fn print_usage() {
 }
 
 fn main() -> Result<(), String> {
+    // TODO: Better argparse, maybe clap?
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 3 {
