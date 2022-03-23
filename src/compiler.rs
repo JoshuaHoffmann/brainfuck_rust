@@ -27,7 +27,7 @@ pub fn compile_to_c(raw: String) -> Result<String, &'static str> {
     push_code_indent(&mut c_code,"char *ptr;\n", indent_depth);
     push_code_indent(&mut c_code, "ptr = &tape[0];\n", indent_depth);
 
-    for (counter, &instruction) in program.iter().enumerate() {
+    for &instruction in program.iter() {
         match instruction {
             Operator::IncrDataPtr => {
                 push_code_indent(&mut c_code, "ptr++;\n", indent_depth)
